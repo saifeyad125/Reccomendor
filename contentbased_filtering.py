@@ -1,52 +1,48 @@
 from setup import load_data, show_dataframe_popup, pd, np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
-import gc  # for garbage collection
+from sklearn.metrics.pairwise import cosine_similarity
 
 dataframe = load_data()
 
-# Use a smaller max_features value
-tfidf = TfidfVectorizer(stop_words='english', max_features=50)
-
+# Preprocessing
 dataframe['Translated_Review'] = dataframe['Translated_Review'].fillna('')
-dataframe['Sentiment'] = dataframe['Sentiment'].fillna('Neutral')
 
-# Instead of creating separate matrices, process all reviews together
-grouped_data = dataframe.groupby('App').agg({
-    'Translated_Review': lambda x: ' '.join(x),
-    'Sentiment': lambda x: list(x)  # Keep sentiments as a list for potential weighting
-}).reset_index()
+# Group reviews by game
+grouped_data = dataframe.groupby('App')['Translated_Review'].apply(' '.join).reset_index()
 
-# Create TF-IDF matrix once
+# Create TF-IDF vectorizer
+tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(grouped_data['Translated_Review'])
 
-# Calculate similarity matrix
-print("Calculating similarity matrix...")
-cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
-
-# Create reverse mapping
+# Create mapping of game names to indices
 indices = pd.Series(grouped_data.index, index=grouped_data['App']).drop_duplicates()
 
-def get_recommendations(app_name, cosine_sim=cosine_sim):
+def get_recommendations(keywords):
     try:
-        idx = indices[app_name]
-        sim_scores = list(enumerate(cosine_sim[idx]))
+        # Process keywords
+        words = [word.strip().lower() for word in keywords.split(',')]
+        words = ' '.join(words)
+        
+        # Transform keywords into TF-IDF vector
+        words_matrix = tfidf.transform([words])
+        
+        # Calculate similarity
+        similarity_scores = cosine_similarity(words_matrix, tfidf_matrix)[0]
+        
+        # Get similar games
+        sim_scores = list(enumerate(similarity_scores))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-        sim_scores = sim_scores[1:6]  # Get top 5 similar games
+        sim_scores = sim_scores[:5]  # Get top 5 similar games
+        
+        # Get game indices
         app_indices = [i[0] for i in sim_scores]
+        
         return grouped_data['App'].iloc[app_indices]
-    except KeyError:
-        return f"Game '{app_name}' not found in the database."
+    
+    except Exception as e:
+        return f"Error processing keywords: {str(e)}"
 
 # Test the recommendations
-print("\nRecommendations for Candy Crush Saga:")
-print(get_recommendations('Candy Crush Saga'))
-
-
-
-
-
-# Clean up to free memory
-del tfidf_matrix
-del cosine_sim
-gc.collect()
+print("\nRecommendations for keywords 'scary, , multiplayer':")
+recommendations = get_recommendations('scary, puzzle, monsters')
+print(recommendations)
