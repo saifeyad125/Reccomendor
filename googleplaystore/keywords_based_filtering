@@ -1,0 +1,66 @@
+from setup import load_data, show_dataframe_popup, pd, np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity as cosine_sim
+
+dataframe = load_data()
+
+# Preprocessing, we will drop rows with missing values in the 'Translated_Review' column
+dataframe = dataframe.dropna(subset=['Translated_Review'])
+
+# Group reviews by game
+grouped_data = dataframe.groupby('App')['Translated_Review'].apply(' '.join).reset_index()
+
+# Create TF-IDF vectorizer
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(grouped_data['Translated_Review'])
+
+# Create mapping of game names to indices
+indices = pd.Series(grouped_data.index, index=grouped_data['App']).drop_duplicates()
+
+def get_recommendations(keywords, indices=indices, tfidf_matrix=tfidf_matrix, tfidf=tfidf):
+    """
+    Get game recommendations based on input keywords.
+    
+    Args:
+        keywords (str): Comma-separated keywords
+        indices: Series mapping game names to indices
+        tfidf_matrix: TF-IDF matrix of game reviews
+        tfidf: TF-IDF vectorizer
+    
+    Returns:
+        DataFrame: Recommended games with similarity scores
+    """
+    # Process keywords
+    words = [word.strip().lower() for word in keywords.split(',')]
+    words = ' '.join(words)
+    
+    # Transform keywords into TF-IDF vector
+    words_matrix = tfidf.transform([words])
+    
+    # Calculate similarity
+    similarity_scores = cosine_sim(words_matrix, tfidf_matrix)[0]
+    
+    # Get top 5 similar games
+    game_scores = list(enumerate(similarity_scores))
+    game_scores = sorted(game_scores, key=lambda x: x[1], reverse=True)
+    game_scores = game_scores[:5]
+    
+    # Extract game indices and scores
+    game_indices = [i[0] for i in game_scores]
+    scores = [i[1] for i in game_scores]
+    
+    # Create recommendations DataFrame
+    recommendations_df = pd.DataFrame({
+        'Game': grouped_data['App'].iloc[game_indices],
+        'Similarity Score': [f"{score:.2%}" for score in scores]
+    })
+    
+    return recommendations_df
+
+#i want to search for a game called slenderman
+
+# Example usage
+keywords = "fun, addictive, multiplayer"
+print("\nRecommendations for keywords:", keywords)
+recommendations = get_recommendations(keywords)
+show_dataframe_popup(recommendations)
