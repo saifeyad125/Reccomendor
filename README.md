@@ -1,7 +1,9 @@
 # Internship Data Analysis & Recommendations  
 
 ## Overview  
-During my internship, I was responsible for *transforming, interpreting, and utilizing data* to generate meaningful insights and provide data-driven recommendations. My work involved handling large datasets, cleaning and preprocessing data, analyzing patterns, and visualizing key findings to support decision-making.  
+During my internship, I was responsible for *transforming, interpreting, and utilizing data* to generate meaningful insights and provide data-driven recommendations. My work involved handling large datasets, cleaning and preprocessing data, analyzing patterns, and visualizing key findings to support decision-making. 
+You can find my work on **Kaggle** where the data is presented nicely: [https://www.kaggle.com/saifeyad](https://www.kaggle.com/saifeyad)  
+
 
 ## Key Responsibilities  
 - **Data Transformation**: Processed raw data by cleaning, normalizing, and structuring it for analysis.  
